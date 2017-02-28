@@ -128,13 +128,13 @@ public class FloodlightModuleLoader {
         if (serviceMap != null)
             return;
 
-        serviceMap = new HashMap<>();
-        moduleServiceMap = new HashMap<>();
+        serviceMap = new HashMap<>();//映射一个service对应的一个module
+        moduleServiceMap = new HashMap<>();//一个module和所有它能提供的service映射
         moduleNameMap = new HashMap<>();
 
         // Get all the current modules in the classpath
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
-        ServiceLoader<IFloodlightModule> moduleLoader =
+        ServiceLoader<IFloodlightModule> moduleLoader =//与META-INF/services里面的文件有关，叫SPI
                 ServiceLoader.load(IFloodlightModule.class, cl);
         // Iterate for each module, iterate through and add it's services
         Iterator<IFloodlightModule> moduleIter = moduleLoader.iterator();
@@ -253,10 +253,10 @@ public class FloodlightModuleLoader {
             if (moduleList != null) {
                 moduleList = moduleList.replaceAll("\\s", "");
                 configMods.addAll(Arrays.asList(moduleList.split(",")));
-            }
+            }//configMods现在保存了所有modules的名字
             fprop.remove(FLOODLIGHT_MODULES_KEY);
 
-            prop.putAll(fprop);
+            prop.putAll(fprop);//配置文件中除了modules的键值对
         } catch (IOException e) {
             throw new FloodlightModuleException(e);
         }
@@ -274,7 +274,7 @@ public class FloodlightModuleLoader {
                                         throws FloodlightModuleException {
         logger.debug("Starting module loader");
 
-        findAllModules(configMods);
+        findAllModules(configMods);//查找所有模块 维护三个List
 
         ArrayList<IFloodlightModule> moduleList = new ArrayList<>();
         Map<Class<? extends IFloodlightService>, IFloodlightModule> moduleMap =

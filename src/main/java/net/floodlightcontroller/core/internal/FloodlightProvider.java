@@ -34,7 +34,15 @@ import net.floodlightcontroller.storage.IStorageSourceService;
 import net.floodlightcontroller.threadpool.IThreadPoolService;
 
 import org.sdnplatform.sync.ISyncService;
-
+/**
+ * 两个主要功能
+ * 1 处理交换机之间的链接并将openflow消息转化为其他模块可以监听的事件
+ * 2 它决定某些特定的openflow消息（即packetin、FlowRemoved、PortStatus等）
+ * 被分配到该侦听消息的模块顺序
+ * @author wzc
+ *floodlightProvider使用Netty库来处理交换机的线程和链接，
+ *每一个openflow消息将通过一个Netty线程来处理，并执行与所有模块的消息相关联的所有逻辑
+ */
 public class FloodlightProvider implements IFloodlightModule {
     Controller controller;
 
