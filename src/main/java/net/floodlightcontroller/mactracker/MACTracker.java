@@ -102,13 +102,14 @@ public class MACTracker implements IOFMessageListener, IFloodlightModule {
 
 	}
 
-	/* (non-Javadoc)
-	 * @see net.floodlightcontroller.core.module.IFloodlightModule#startUp(net.floodlightcontroller.core.module.FloodlightModuleContext)
+	/**
+	 * 在实现基本监听时，packet-in消息需要在startUp方法中被记录 
+	 * 和注册，同时确认新增模块需要依赖的其他模块已被正常初始化。
 	 */
 	@Override
 	public void startUp(FloodlightModuleContext context) throws FloodlightModuleException {
 		// TODO Auto-generated method stub
-		floodlightProvider.addOFMessageListener(OFType.PACKET_IN, this);
+		floodlightProvider.addOFMessageListener(OFType.PACKET_IN, this);//macTracker这个类需要监听packet-in消息
 
 	}
 

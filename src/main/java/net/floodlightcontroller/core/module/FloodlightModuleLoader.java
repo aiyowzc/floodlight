@@ -135,7 +135,7 @@ public class FloodlightModuleLoader {
         // Get all the current modules in the classpath
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         ServiceLoader<IFloodlightModule> moduleLoader =//与META-INF/services里面的文件有关，叫SPI
-                ServiceLoader.load(IFloodlightModule.class, cl);
+                ServiceLoader.load(IFloodlightModule.class, cl);//其实就是加载文件里面的mudules
         // Iterate for each module, iterate through and add it's services
         Iterator<IFloodlightModule> moduleIter = moduleLoader.iterator();
         while (moduleIter.hasNext()) {
@@ -155,17 +155,17 @@ public class FloodlightModuleLoader {
 
             // Set up serviceMap
             Collection<Class<? extends IFloodlightService>> servs =
-                    m.getModuleServices();
-            if (servs != null) {
+                    m.getModuleServices();//通过module找到对应的service，例如floodlightprovider里面
+            if (servs != null) {          //只有一个IFloodlightProviderService.class
                 moduleServiceMap.put(m, servs);
                 for (Class<? extends IFloodlightService> s : servs) {
                     Collection<IFloodlightModule> mods =
-                            serviceMap.get(s);
+                            serviceMap.get(s);//serviceMap好像是空的，mods也就是空的                   
                     if (mods == null) {
                         mods = new ArrayList<IFloodlightModule>();
-                        serviceMap.put(s, mods);
-                    }
-                    mods.add(m);
+                        serviceMap.put(s, mods);//serviceMap里面只有service键，对应的module值应该是空的
+                    }                   
+                    mods.add(m);//此时，serviceMap里module值添加完成
                     // Make sure they haven't specified duplicate modules in
                     // the config
                     int dupInConf = 0;
@@ -275,20 +275,20 @@ public class FloodlightModuleLoader {
         logger.debug("Starting module loader");
 
         findAllModules(configMods);//查找所有模块 维护三个List
-
+        //运行完后，moduleNameMap和moduleServiceMap和serviceMap都添加完毕
         ArrayList<IFloodlightModule> moduleList = new ArrayList<>();
         Map<Class<? extends IFloodlightService>, IFloodlightModule> moduleMap =
                 new HashMap<>();
         HashSet<String> modsVisited = new HashSet<>();
 
-        ArrayDeque<String> modsToLoad = new ArrayDeque<>(configMods);
-        while (!modsToLoad.isEmpty()) {
-            String moduleName = modsToLoad.removeFirst();
-            traverseDeps(moduleName, modsToLoad,
+        ArrayDeque<String> modsToLoad = new ArrayDeque<>(configMods);//deque是双端队列，modsToLoad现在保存了所有modules的名字
+        while (!modsToLoad.isEmpty()) {								 
+            String moduleName = modsToLoad.removeFirst();//把第一个元素去掉返回第一个元素，第一个是head
+            traverseDeps(moduleName, modsToLoad,//一次传入一个module名字
                          moduleList, moduleMap, modsVisited);
-        }
+        }//最终调用addModule方法，moduleMap保存了service和module的映射，moduleList保存了所有的module实体
 
-        parseConfigParameters(prop);
+        parseConfigParameters(prop);//最终在FloodlightModuleContext里设置了一个Map configParams保存module和它的配置参数
 
         loadedModuleList = moduleList;
 
@@ -316,12 +316,12 @@ public class FloodlightModuleLoader {
 
         // Add its dependencies to the stack
         Collection<Class<? extends IFloodlightService>> deps =
-                module.getModuleDependencies();
+                module.getModuleDependencies();//找到module所需要的所有service依赖
         if (deps != null) {
-            for (Class<? extends IFloodlightService> c : deps) {
+            for (Class<? extends IFloodlightService> c : deps) {//遍历刚才找到的这个module所需要的所有service依赖
                 IFloodlightModule m = moduleMap.get(c);
                 if (m == null) {
-                    Collection<IFloodlightModule> mods = serviceMap.get(c);
+                    Collection<IFloodlightModule> mods = serviceMap.get(c);//获取这个module的一个service依赖所对应的所有modules
                     // Make sure only one module is loaded
                     if ((mods == null) || (mods.size() == 0)) {
                         throw new FloodlightModuleException("ERROR! Could not " +
@@ -457,7 +457,7 @@ public class FloodlightModuleLoader {
                 logger.debug("Initializing " +
                              module.getClass().getCanonicalName());
             }
-            module.init(floodlightModuleContext);
+            module.init(floodlightModuleContext);//各个module调用自己的初始化方法
         }
     }
 
@@ -472,7 +472,7 @@ public class FloodlightModuleLoader {
             if (logger.isDebugEnabled()) {
                 logger.debug("Starting " + m.getClass().getCanonicalName());
             }
-            m.startUp(floodlightModuleContext);
+            m.startUp(floodlightModuleContext);//调用每个module的startUp方法
         }
     }
 
@@ -509,8 +509,8 @@ public class FloodlightModuleLoader {
     public void runModules() throws FloodlightModuleException {
         List<RunMethod> mainLoopMethods = Lists.newArrayList();
 
-        for (IFloodlightModule m : getModuleList()) {
-            for (Method method : m.getClass().getDeclaredMethods()) {
+        for (IFloodlightModule m : getModuleList()) {//遍历所有modules实例
+            for (Method method : m.getClass().getDeclaredMethods()) {//遍历每个类的方法
                 Run runAnnotation = method.getAnnotation(Run.class);
                 if (runAnnotation != null) {
                     RunMethod runMethod = new RunMethod(m, method);
@@ -542,15 +542,15 @@ public class FloodlightModuleLoader {
             String key = (String) e.nextElement();
 
             String configValue = null;
-            int lastPeriod = key.lastIndexOf(".");
-            String moduleName = key.substring(0, lastPeriod);
-            String configKey = key.substring(lastPeriod + 1);
+            int lastPeriod = key.lastIndexOf(".");//点.最后出现的位置
+            String moduleName = key.substring(0, lastPeriod);//分割出module名字
+            String configKey = key.substring(lastPeriod + 1);//分割出config键名
             // Check to see if it's overridden on the command line
             String systemKey = System.getProperty(key);
             if (systemKey != null) {
                 configValue = systemKey;
             } else {
-                configValue = prop.getProperty(key);
+                configValue = prop.getProperty(key);//默认配置文件里的设置的值
             }
 
             IFloodlightModule mod = moduleNameMap.get(moduleName);

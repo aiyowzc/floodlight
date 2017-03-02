@@ -86,6 +86,7 @@ public class Controller implements IFloodlightProviderService, IStorageSourceLis
 
     /* OpenFlow message listeners and dispatchers */
     protected static ConcurrentMap<OFType, ListenerDispatcher<OFType,IOFMessageListener>> messageListeners;
+    														//记录了控制器中所有的监听器，在startUp方法中注册的监听器都被添加到这里
     protected static ConcurrentLinkedQueue<IControllerCompletionListener> completionListeners;
     
     /* 
@@ -97,6 +98,10 @@ public class Controller implements IFloodlightProviderService, IStorageSourceLis
     protected static ListenerDispatcher<HAListenerTypeMarker,IHAListener> haListeners;
     protected static Map<String, List<IInfoProvider>> providerMap;
     protected static BlockingQueue<IUpdate> updates;
+    /*
+     * 一个特殊的队列，如果是空的，那么从中取东西的操作会被阻塞进入等待状态，直到BlockingQueue进了东西才会被唤醒
+     * 同样，满了以后也无法添加
+     */
     protected static ControllerCounters counters;
     
     /* Module Loader State */
@@ -456,16 +461,21 @@ public class Controller implements IFloodlightProviderService, IStorageSourceLis
     	}
     	listenerName=null; // help gc
     }
-    
+    /**
+     * 由于messageListener的类型是ConcurrentMap<OFType, ListenerDispatcher<OFType,IOFMessageListener>>
+     * 即OFType和一个ListenerDispatcher是一个键值对，
+     * 这个函数的思想是先得到一个ListenerDispatcher对象，填充这个对象
+     * 然后确保这个对象在messageListener中，这样就实现了Listener的注册
+     */
     @Override
     public synchronized void addOFMessageListener(OFType type, IOFMessageListener listener) {
         ListenerDispatcher<OFType, IOFMessageListener> ldd =
             messageListeners.get(type);
         if (ldd == null) {
             ldd = new ListenerDispatcher<OFType, IOFMessageListener>();
-            messageListeners.put(type, ldd);
+            messageListeners.put(type, ldd);//消息监听者们
         }
-        ldd.addListener(type, listener);
+        ldd.addListener(type, listener);//哪个类需要监听哪种类型的消息
     }
 
     @Override
@@ -477,10 +487,10 @@ public class Controller implements IFloodlightProviderService, IStorageSourceLis
         }
     }
 
-    private void logListeners() {
+    private void logListeners() {//遍历所有的消息监听器
         for (Map.Entry<OFType, ListenerDispatcher<OFType, IOFMessageListener>> entry : messageListeners.entrySet()) {
-            OFType type = entry.getKey();
-            ListenerDispatcher<OFType, IOFMessageListener> ldd = entry.getValue();
+            OFType type = entry.getKey();//拿到消息的类型
+            ListenerDispatcher<OFType, IOFMessageListener> ldd = entry.getValue();//拿到消息要分发给的那个类
 
             StringBuilder sb = new StringBuilder();
             sb.append("OFListeners for ");
@@ -587,13 +597,13 @@ public class Controller implements IFloodlightProviderService, IStorageSourceLis
     public void run() {
         moduleLoaderState = ModuleLoaderState.COMPLETE;
 
-        if (log.isDebugEnabled()) {
+        if (log.isDebugEnabled()) {//遍历监听器
             logListeners();
         }
 
         while (true) {
             try {
-                IUpdate update = updates.take();
+                IUpdate update = updates.take();//取走BlockingQueue里排在首位的对象
                 update.dispatch();
             } catch (InterruptedException e) {
                 log.error("Received interrupted exception in updates loop;" +
