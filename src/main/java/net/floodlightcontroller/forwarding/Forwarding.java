@@ -414,8 +414,8 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     protected void doForwardFlow(IOFSwitch sw, OFPacketIn pi, IRoutingDecision decision, FloodlightContext cntx, boolean requestFlowRemovedNotifn) {
         OFPort srcPort = OFMessageUtils.getInPort(pi);
         DatapathId srcSw = sw.getId();
-        IDevice dstDevice = IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_DST_DEVICE);
-        IDevice srcDevice = IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE);
+        IDevice dstDevice = IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_DST_DEVICE);//目标设备
+        IDevice srcDevice = IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE);//获取源设备
 
         if (dstDevice == null) {
             log.debug("Destination device unknown. Flooding packet");
@@ -488,7 +488,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                 dstAp.getNodeId(),
                 dstAp.getPortId());
 
-        Match m = createMatchFromPacket(sw, srcPort, pi, cntx);
+        Match m = createMatchFromPacket(sw, srcPort, pi, cntx);//将packet-in中的相关信息加载到该对象中
 
         if (! path.getPath().isEmpty()) {
             if (log.isDebugEnabled()) {

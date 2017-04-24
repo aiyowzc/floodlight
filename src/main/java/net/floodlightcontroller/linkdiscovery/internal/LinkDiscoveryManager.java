@@ -211,7 +211,7 @@ IFloodlightModule, IInfoProvider {
 	/**
 	 * Map from link to the most recent time it was verified functioning
 	 */
-	protected Map<Link, LinkInfo> links;
+	protected Map<Link, LinkInfo> links;//以下三个map都是进行链路管理的数据结构
 
 	/**
 	 * Map from switch id to a set of all links with it as an endpoint
@@ -588,19 +588,19 @@ IFloodlightModule, IInfoProvider {
 	protected Command handlePacketIn(DatapathId sw, OFPacketIn pi,
 			FloodlightContext cntx) {
 		Ethernet eth = IFloodlightProviderService.bcStore.get(cntx,
-				IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
+				IFloodlightProviderService.CONTEXT_PI_PAYLOAD);//payload为有效载荷，好像也就是数据包中有用的数据
 		OFPort inPort = (pi.getVersion().compareTo(OFVersion.OF_12) < 0 ? pi.getInPort() : pi.getMatch().get(MatchField.IN_PORT));
-		if (eth.getPayload() instanceof BSN) {
-			BSN bsn = (BSN) eth.getPayload();
+		if (eth.getPayload() instanceof BSN) {//左边对象是否为右边类的实例
+			BSN bsn = (BSN) eth.getPayload();//BSN好像也是一种LLDP包
 			if (bsn == null) return Command.STOP;
 			if (bsn.getPayload() == null) return Command.STOP;
 			// It could be a packet other than BSN LLDP, therefore
 			// continue with the regular processing.
 			if (bsn.getPayload() instanceof LLDP == false)
-				return Command.CONTINUE;
+				return Command.CONTINUE;//让其他监听器处理
 			return handleLldp((LLDP) bsn.getPayload(), sw, inPort, false, cntx);
 		} else if (eth.getPayload() instanceof LLDP) {
-			return handleLldp((LLDP) eth.getPayload(), sw, inPort, true, cntx);
+			return handleLldp((LLDP) eth.getPayload(), sw, inPort, true, cntx);//传递参数为LLDP有效载荷，交换机id，inPort
 		} else if (eth.getEtherType().getValue() < 1536 && eth.getEtherType().getValue() >= 17) {
 			long destMac = eth.getDestinationMACAddress().getLong();
 			if ((destMac & LINK_LOCAL_MASK) == LINK_LOCAL_VALUE) {
@@ -665,9 +665,9 @@ IFloodlightModule, IInfoProvider {
 		long otherId = 0;
 		boolean myLLDP = false;
 		Boolean isReverse = null;
-
+		//创建字节缓冲区，这里使用的是包装方法，使用一个已经有的数组来创建
 		ByteBuffer portBB = ByteBuffer.wrap(lldp.getPortId().getValue());
-		portBB.position(1);
+		portBB.position(1);//设置游标，记录从哪里开始操作数据
 
 		OFPort remotePort = OFPort.of(portBB.getShort());
 		IOFSwitch remoteSwitch = null;
@@ -776,7 +776,7 @@ IFloodlightModule, IInfoProvider {
 					new Object[] { time, iofSwitch.getId(), timestamp, remoteSwitch.getId(), iofSwitch.getId(), String.valueOf(latency.getValue()) });
 		}
 		Link lt = new Link(remoteSwitch.getId(), remotePort,
-				iofSwitch.getId(), inPort, latency);
+				iofSwitch.getId(), inPort, latency);//这里生成了一个Link链路，就是连接了两个交换机的两个端口
 
 		if (!isLinkAllowed(lt.getSrc(), lt.getSrcPort(),
 				lt.getDst(), lt.getDstPort()))
@@ -794,7 +794,7 @@ IFloodlightModule, IInfoProvider {
 			lastBddpTime = new Date(firstSeenTime.getTime());
 		}
 
-		LinkInfo newLinkInfo = new LinkInfo(firstSeenTime, lastLldpTime, lastBddpTime);
+		LinkInfo newLinkInfo = new LinkInfo(firstSeenTime, lastLldpTime, lastBddpTime);//存储Link链路的一些信息，几个时间
 
 		addOrUpdateLink(lt, newLinkInfo);
 
@@ -1261,7 +1261,7 @@ IFloodlightModule, IInfoProvider {
 		return true;
 	}
 
-	private boolean addLink(Link lt, LinkInfo newInfo) {
+	private boolean addLink(Link lt, LinkInfo newInfo) {//修改三个map
 		NodePortTuple srcNpt, dstNpt;
 
 		srcNpt = new NodePortTuple(lt.getSrc(), lt.getSrcPort());
@@ -1371,7 +1371,7 @@ IFloodlightModule, IInfoProvider {
 		return linkChanged;
 	}
 
-	protected boolean addOrUpdateLink(Link lt, LinkInfo newInfo) {
+	protected boolean addOrUpdateLink(Link lt, LinkInfo newInfo) {//增加或者更新链路
 		boolean linkChanged = false;
 
 		lock.writeLock().lock();
@@ -1403,7 +1403,7 @@ IFloodlightModule, IInfoProvider {
 			linkChanged = false;
 
 			if (existingInfo == null) {
-				addLink(lt, newInfo);
+				addLink(lt, newInfo);//增加新链路
 				updateOperation = UpdateOperation.LINK_UPDATED;
 				linkChanged = true;
 
@@ -1414,7 +1414,7 @@ IFloodlightModule, IInfoProvider {
 					log.debug("Inter-switch link detected: {}", lt);
 				}
 			} else {
-				linkChanged = updateLink(lt, existingInfo, newInfo);
+				linkChanged = updateLink(lt, existingInfo, newInfo);//更新链路
 				if (linkChanged) {
 					updateOperation = UpdateOperation.LINK_UPDATED;
 					LinkType linkType = getLinkType(lt, newInfo);

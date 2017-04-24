@@ -654,7 +654,7 @@ ITopologyManagerBackend, ILinkDiscoveryListener, IOFMessageListener {
     }
 
     @Override
-    public void startUp(FloodlightModuleContext context) {
+    public void startUp(FloodlightModuleContext context) {//实现module接口，相当于入口函数
         clearCurrentTopology();
         // Initialize role to floodlight provider role.
         this.role = floodlightProviderService.getRole();
@@ -1262,7 +1262,7 @@ ITopologyManagerBackend, ILinkDiscoveryListener, IOFMessageListener {
      * Clears the current topology. Note that this does NOT
      * send out updates.
      */
-    public void clearCurrentTopology() {
+    public void clearCurrentTopology() {//可以说这些操作都是为receive方法进行的一些预处理
         this.clear();
         linksUpdated = true;
         dtLinksUpdated = true;

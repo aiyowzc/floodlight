@@ -141,14 +141,18 @@ public class TopologyInstance {
 
     protected void compute() {
         /*
-         * Step 1: Compute clusters ignoring ports with > 2 links and 
+         * Step 1: Compute clusters集群 ignoring ports with > 2 links and 
          * blocked links.
+         * 归类，将所有相连接的links放置于同一个集群中
          */
         identifyClusters();
 
         /*
          * Step 2: Associate non-blocked links within clusters to the cluster
          * in which they reside. The remaining links are inter-cluster links.
+         * 建立集群，遍历所有links，如果link连接的是同一个集群，则将其加入该集群，所以该方法统计了
+         * 所有集群内的links。FL这么做也是减少路由计算的开销，不然若干个大二层网络中共有n个节点，就需要
+         * n的平方的存储开销，计算效率也会下降，如果将不相连的节点分开就减少了上述开销
          */
         identifyIntraClusterLinks();
 
@@ -158,6 +162,7 @@ public class TopologyInstance {
          * dijkstra's algorithm from the archipelago ID switch (lowest switch 
          * DPID). We need a broadcast tree per archipelago since each 
          * archipelago is by definition isolated from all other archipelagos.
+         * 
          */
         identifyArchipelagos();
 
@@ -166,6 +171,7 @@ public class TopologyInstance {
          * within each archipelago and compute multiple paths. The shortest
          * path located (i.e. first run of dijkstra's algorithm) will be used 
          * as the broadcast tree for the archipelago.
+         * 
          */
         computeOrderedPaths();
 
@@ -249,7 +255,7 @@ public class TopologyInstance {
      *
      * This function divides the network into clusters. Every cluster is
      * a strongly connected component. The network may contain unidirectional
-     * links.  The function calls dfsTraverse for performing depth first
+     * links.  The function calls dfsTraverse深度优先遍历 for performing depth first
      * search and cluster formation.
      *
      * The computation of strongly connected components is based on
@@ -261,11 +267,11 @@ public class TopologyInstance {
     private void identifyClusters() {
         Map<DatapathId, ClusterDFS> dfsList = new HashMap<DatapathId, ClusterDFS>();
 
-        if (switches == null) return;
+        if (switches == null) return;//switches存储了所有交换机的id
 
         for (DatapathId key : switches) {
             ClusterDFS cdfs = new ClusterDFS();
-            dfsList.put(key, cdfs);
+            dfsList.put(key, cdfs);//每个switch作为键
         }
 
         Set<DatapathId> currSet = new HashSet<DatapathId>();
@@ -275,7 +281,7 @@ public class TopologyInstance {
             if (cdfs == null) {
                 log.error("No DFS object for switch {} found.", sw);
             } else if (!cdfs.isVisited()) {
-                dfsTraverse(0, 1, sw, dfsList, currSet);
+                dfsTraverse(0, 1, sw, dfsList, currSet);//深度优先遍历算法
             }
         }
     }
@@ -325,11 +331,11 @@ public class TopologyInstance {
 
         // Traverse the graph through every outgoing link.
         if (portsWithLinks.get(currSw) != null){
-            for (OFPort p : portsWithLinks.get(currSw)) {
+            for (OFPort p : portsWithLinks.get(currSw)) {//portsWithLinks存着switch和端口的映射，遍历该交换机所有可用端口
                 Set<Link> lset = linksNonBcastNonTunnel.get(new NodePortTuple(currSw, p));
                 if (lset == null) continue;
                 for (Link l : lset) {
-                    DatapathId dstSw = l.getDst();
+                    DatapathId dstSw = l.getDst();//目的交换机
 
                     // ignore incoming links.
                     if (dstSw.equals(currSw)) continue;
@@ -789,7 +795,7 @@ public class TopologyInstance {
                 for (DatapathId dst : dstSws) {
                     log.debug("Calling Yens {} {}", src, dst);
                     paths = yens(src, dst, TopologyManager.getMaxPathsToComputeInternal(),
-                            getArchipelago(src), getArchipelago(dst));
+                            getArchipelago(src), getArchipelago(dst));//dijkstra算法
                     pathId = new PathId(src, dst);
                     pathcache.put(pathId, paths);
                     log.debug("Adding paths {}", paths);
